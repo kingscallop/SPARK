@@ -24,6 +24,8 @@
 #ifndef H_SPK_META
 #define H_SPK_META
 
+#include <type_traits>
+
 // Note: '__is_enum' intrinsic supported by at least VC++ >= 2005 and GCC >= 4.3
 #define IS_ENUM( X ) __is_enum(X)
 
@@ -373,25 +375,9 @@ namespace meta
 
 	/**
 	* @internal
-	* @brief Meta-function storing whether the type is abstract or not
-	*/
-	template<typename T>
-	struct IsAbstract
-	{
-		struct yes { char d[5]; };
-		struct no { char d[2]; };
-
-		template <typename C> static no test(C (*)[1]);
-		template <typename> static yes test(...);
-
-		static const bool value = (sizeof(test<T>(0)) == sizeof(yes));
-	};
-
-	/**
-	* @internal
 	* @brief Structure used to clone a type
 	*/
-	template<typename T, bool = IsAbstract<T>::value>
+	template<typename T, bool = std::is_abstract<T>::value>
 	struct Cloner
 	{
 		static T* clone(const T* source) { return new T(*source); }
@@ -417,6 +403,12 @@ namespace meta
 	template<int n> struct Counter : public Counter<n-1> {};
 	template<> struct Counter<0> {};
 
+	template<unsigned int n>
+	struct CountWrapper
+	{
+		static const unsigned int value = n;
+	};
+
 	// Create a counter
 #define MAKE_COUNTER( _tag_ ) \
 		static SPK::meta::Count<1> _spk_count_ ## _tag_ (SPK::meta::Counter<1>)
@@ -424,8 +416,9 @@ namespace meta
 	// Use counter
 #define GET_COUNT( _tag_ ) \
 		((sizeof(_spk_count_ ## _tag_ (SPK::meta::Counter<MAX_COUNT + 1>())) / sizeof(bool)) - 1)
-#define INC_COUNT( _tag_ ) \
-		static SPK::meta::Count<GET_COUNT(_tag_) + 2> _spk_count_ ## _tag_ (SPK::meta::Counter<GET_COUNT(_tag_) + 2>)
+#define INC_COUNT( _tag_, _uniqueid_ ) \
+		static const unsigned int spk_meta_inc_count_ ## _uniqueid_ = GET_COUNT(_tag_); \
+		static SPK::meta::Count<spk_meta_inc_count_ ## _uniqueid_ + 2> _spk_count_ ## _tag_ (SPK::meta::Counter<spk_meta_inc_count_ ## _uniqueid_ + 2>)
 }
 }
 
@@ -475,6 +468,6 @@ namespace meta
 		static const bool isVoid = false;													\
 		typedef BaseTypeRelation<_cpp_, _base_, cpp_name, spk_name, _passtype_> type;		\
 	};																						\
-	INC_COUNT(type_relation)
+	INC_COUNT(type_relation, _base_)
 
 #endif

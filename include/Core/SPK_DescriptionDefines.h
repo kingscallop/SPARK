@@ -93,82 +93,83 @@ namespace meta
 		_spk_check ## _t_<typename description_root::parentDescription>::value>::value
 
 #define SPK_REGISTER_DESC_TYPE( _tag_ , _type_ )											\
+		static const unsigned int spk_meta_count_ ## _type_ = GET_COUNT(_tag_);				\
 		template<bool b>																	\
-		struct spk ## _tag_<GET_COUNT(_tag_), b>											\
+		struct spk ## _tag_<SPK::meta::CountWrapper<spk_meta_count_ ## _type_>, b>			\
 		{																					\
 			static const bool isVoid = false;												\
 			typedef _type_ type;															\
 		};																					\
-		INC_COUNT(_tag_)
+		INC_COUNT(_tag_, _type_)
 
 /**
 * @internal
 */
-#define _spk_description_body( ... )														\
-		{																					\
-		private:																			\
-			static description_base* _spk_getDescription(_spk_obj* obj)						\
-			{																				\
-				return &obj->_spk_description_obj;											\
-			}																				\
-			template<typename,typename,typename> friend class SPK::DescriptionBase;			\
-			template<int index, bool unused = true>											\
-			struct spkAttr																	\
-			{																				\
-				static const bool isVoid = true;											\
-				typedef SPK::DefaultAttribute<_spk_obj> type;								\
-			};																				\
-			MAKE_COUNTER(Attr);																\
-																							\
-			template<int index, bool unused = true>											\
-			struct spkCtrl																	\
-			{																				\
-				static const bool isVoid = true;											\
-				typedef SPK::DefaultControl<_spk_obj> type;									\
-			};																				\
-			MAKE_COUNTER(Ctrl);																\
-																							\
-			/* Workaround for VS2003-2012 : the following structure (Instantiate)         */\
-			/* triggers infinite inheritance if used in class template and defined        */\
-			/* outside it. See the following page:                                        */\
-			/*http://stackoverflow.com/questions/15620686/templated-recurrent-type-error  */\
-			template<template<int,bool=true> class A, int n = 0, bool = A<n>::isVoid>		\
-			struct Instantiate : public Instantiate<A, n+1>									\
-			{																				\
-				typedef typename A<n>::type type;											\
-				type object;																\
-				using Instantiate<A, n+1>::getObject;										\
-				Instantiate() : object() {}													\
-				type* getObject(SPK::meta::NumOverload<n>)									\
-				{																			\
-					return &object;															\
-				}																			\
-			};																				\
-			template<template<int,bool> class A, int n>										\
-			struct Instantiate<A, n, true>													\
-			{																				\
-				void getObject();															\
-			};																				\
-		public:																				\
-			__VA_ARGS__																		\
-		private:																			\
-			Instantiate<spkAttr> _spk_attributes;											\
-			template<int n>																	\
-			typename spkAttr<n>::type* getAttributePtr()									\
-			{																				\
-				return _spk_attributes.getObject(SPK::meta::NumOverload<n>());				\
-			}																				\
-		};																					\
-	public:																					\
-		class description : public description_base											\
-		{																					\
-		public:																				\
-			static const char* getClassName()												\
-			{																				\
-				return _spk_inner_name::get();												\
-			}																				\
-		};																					\
-	private:																				\
+#define _spk_description_body( ... )																				\
+		{																											\
+		private:																									\
+			static description_base* _spk_getDescription(_spk_obj* obj)												\
+			{																										\
+				return &obj->_spk_description_obj;																	\
+			}																										\
+			template<typename,typename,typename> friend class SPK::DescriptionBase;									\
+			template<typename CW, bool unused = true>																\
+			struct spkAttr																							\
+			{																										\
+				static const bool isVoid = true;																	\
+				typedef SPK::DefaultAttribute<_spk_obj> type;														\
+			};																										\
+			MAKE_COUNTER(Attr);																						\
+																													\
+			template<typename CW, bool unused = true>																\
+			struct spkCtrl																							\
+			{																										\
+				static const bool isVoid = true;																	\
+				typedef SPK::DefaultControl<_spk_obj> type;															\
+			};																										\
+			MAKE_COUNTER(Ctrl);																						\
+																													\
+			/* Workaround for VS2003-2012 : the following structure (Instantiate)         */						\
+			/* triggers infinite inheritance if used in class template and defined        */						\
+			/* outside it. See the following page:                                        */						\
+			/*http://stackoverflow.com/questions/15620686/templated-recurrent-type-error  */						\
+			template<template<typename,bool=true> class A, int n = 0, bool = A<SPK::meta::CountWrapper<n>>::isVoid>	\
+			struct Instantiate : public Instantiate<A, n+1>															\
+			{																										\
+				typedef typename A<SPK::meta::CountWrapper<n>>::type type;											\
+				type object;																						\
+				using Instantiate<A, n+1>::getObject;																\
+				Instantiate() : object() {}																			\
+				type* getObject(SPK::meta::NumOverload<n>)															\
+				{																									\
+					return &object;																					\
+				}																									\
+			};																										\
+			template<template<typename,bool> class A, int n>														\
+			struct Instantiate<A, n, true>																			\
+			{																										\
+				void getObject();																					\
+			};																										\
+		public:																										\
+			__VA_ARGS__																								\
+		private:																									\
+			Instantiate<spkAttr> _spk_attributes;																	\
+			template<int n>																							\
+			typename spkAttr<SPK::meta::CountWrapper<n>>::type* getAttributePtr()									\
+			{																										\
+				return _spk_attributes.getObject(SPK::meta::NumOverload<n>());										\
+			}																										\
+		};																											\
+	public:																											\
+		class description : public description_base																	\
+		{																											\
+		public:																										\
+			static const char* getClassName()																		\
+			{																										\
+				return _spk_inner_name::get();																		\
+			}																										\
+		};																											\
+	private:																										\
 		description_base _spk_description_obj
 
 /**
@@ -306,7 +307,7 @@ namespace meta
 				unsigned int>																\
 			friend class SPK::StructuredAttributeBase;										\
 																							\
-			template<int index, bool unused = true>											\
+			template<typename CW, bool unused = true>										\
 			struct spkField																	\
 			{																				\
 				static const bool isVoid = true;											\
@@ -327,6 +328,15 @@ namespace meta
 		SPK_STRING(name ## _name_, _name_);													\
 		SPK_REGISTER_DESC_TYPE(Attr, _name_);												\
 		SPK_CHECK_UNIQUENESS(_name_);														\
+		typedef SPK::StructuredAttributeBase<					    						\
+				_name_,																		\
+				name ## _name_,																\
+				_spk_obj,																	\
+				&_spk_obj::_create_,														\
+				&_spk_obj::_remove_,														\
+				&_spk_obj::_clear_,															\
+				&_spk_obj::_getsize_,														\
+				GET_COUNT(Attr)> StructAttBase;		     									\
 	public:																					\
 		class _name_																		\
 			: public SPK::StructuredAttributeBase<											\
@@ -343,27 +353,27 @@ namespace meta
 /**
 * @brief Defines a shield in a structured attribute (cannot be used elsewhere)
 */
-#define spk_field( _type_ , _name_ , _setter_ , ... )										\
-	private:																				\
-		SPK_STRING(name ## _name_, _name_);													\
-		static void* _spk_get_field_ ## _name_(_spk_obj* obj)								\
-		{																					\
-			description_base* desc = description_base::_spk_getDescription(obj);			\
-			void* attr = desc->getAttributePtr<instantiation::index>();						\
-			return &(((instantiation::type*)attr)->_spk_field_ ## _name_);					\
-		}																					\
-	public:																					\
-		typedef SPK::FieldAttribute<_type_,													\
-									_spk_obj,												\
-									&_spk_obj::_setter_,									\
-									typename SPK::Getters<_type_,_spk_obj>					\
-									::template extra<unsigned int>							\
-									::template store<SPK_UNPACK_GETTERS_(_spk_obj,__VA_ARGS__)>,\
-									name ## _name_,											\
-									attrName,												\
-									&_spk_get_field_ ## _name_> _name_;						\
-	private:																				\
-		_name_ _spk_field_ ## _name_;														\
+#define spk_field( _type_ , _name_ , _setter_ , ... )													\
+	private:																							\
+		SPK_STRING(name ## _name_, _name_);																\
+		static void* _spk_get_field_ ## _name_(_spk_obj* obj)											\
+		{																								\
+			description_base* desc = description_base::_spk_getDescription(obj);						\
+			void* attr = desc->getAttributePtr<StructAttBase::instantiation::index>();					\
+			return &(((typename StructAttBase::instantiation::type*)attr)->_spk_field_ ## _name_);		\
+		}																								\
+	public:																								\
+		typedef SPK::FieldAttribute<_type_,																\
+									_spk_obj,															\
+									&_spk_obj::_setter_,												\
+									typename SPK::Getters<_type_,_spk_obj>								\
+									::template extra<unsigned int>										\
+									::template store<SPK_UNPACK_GETTERS_(_spk_obj,__VA_ARGS__)>,		\
+									name ## _name_,														\
+									typename StructAttBase::attrName,									\
+									&_spk_get_field_ ## _name_> _name_;									\
+	private:																							\
+		_name_ _spk_field_ ## _name_;																	\
 		SPK_REGISTER_DESC_TYPE(Field, _name_)
 
 #endif
